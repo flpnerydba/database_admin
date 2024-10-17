@@ -1,0 +1,39 @@
+---BACKUP LOG
+use master
+ 
+DECLARE @x SMALLINT
+DECLARE @Quant SMALLINT
+DECLARE @Command VARCHAR(8000)
+DECLARE @BackupType VARCHAR(6)
+DECLARE @CopyOnly CHAR(1)
+DECLARE @BackupRepositoryPath VARCHAR(200)
+DECLARE @Compression CHAR(1)
+DECLARE @Name VARCHAR(60)
+DECLARE @Exclude VARCHAR(200)
+ 
+SET @x = 0
+SET @BackupType='LOG'
+SET @CopyOnly='0'
+SET @BackupRepositoryPath='C:\SQL\Backup\Log\'
+SET @Compression='1'
+SET @Exclude=''
+ 
+DECLARE VCursor CURSOR STATIC FOR
+	SELECT Name
+	FROM sys.databases
+	WHERE state=0 AND is_read_only = 0 AND name NOT IN ('model','tempdb', 'msdb','master','MANUAL','APIS_SAN_DR','ApisSAN','DBA')
+	ORDER BY name
+ 
+OPEN VCursor
+FETCH NEXT FROM VCursor INTO @Name
+ 
+WHILE @@FETCH_STATUS = 0
+BEGIN
+	SELECT @Command= 'EXEC [dbo].[Backup_v2]@DB='''+@Name+''', @BackupType='''+@BackupType+''', @CopyOnly='+@CopyOnly+', @BackupRepositoryPath='''+@BackupRepositoryPath+''', @Compression='+@Compression+''
+	EXEC (@Command)
+	--PRINT @Command
+	FETCH NEXT FROM VCursor INTO @Name
+END
+ 
+CLOSE VCursor
+DEALLOCATE VCursor

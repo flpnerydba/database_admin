@@ -1,0 +1,49 @@
+use master
+go
+ 
+declare @BackupFile      varchar(255)
+declare @DB              varchar(200)
+declare @Description     varchar(255)
+declare @Name            varchar(30)
+declare @MediaName       varchar(30)
+declare @BackupDirectory nvarchar(200)
+declare @log_name        varchar(255)
+Declare @TT as varchar(250)
+ 
+set @BackupDirectory = ' '
+set @Description     = 'Backup Full ' + convert(varchar,getdate(),113)
+ 
+declare Database_Cursor cursor fast_forward for
+ 
+SELECT name FROM master.sys.databases   
+WHERE name IN ('databasename')   and state_desc ='ONLINE'
+ORDER BY 1
+ 
+open Database_Cursor
+if @@error <> 0
+ 
+begin
+      raiserror('ERRO NA ABERTURA DO CURSOR',16,1)
+      return
+end
+ 
+fetch next from Database_Cursor into @DB
+while @@fetch_status = 0
+ 
+begin
+set @TT = FORMAT(SYSDATETIME(), N'ddMMyyyyHHmm');
+      set @BackupFile = @BackupDirectory + @DB+'_FULL_'+ @TT+'.BAK'
+      set @Name       = @DB + '( Daily BACKUP )'
+      backup database @DB to disk = @BackupFile 
+         WITH init,
+            format,
+            nounload,
+            COMPRESSION, 
+            skip,
+            copy_only,
+            name        = @Name, 
+            description = @Description , 
+            stats       = 10
+      fetch next from Database_Cursor into @DB
+end
+ 

@@ -1,0 +1,36 @@
+-- BACKUP DIFFERENCIAL
+USE master;
+GO
+ 
+DECLARE @DatabaseName NVARCHAR(128)
+DECLARE @BackupPath NVARCHAR(260)
+ 
+-- Defina o caminho para o backup diferencial
+SET @BackupPath = 'C:\SQL\Backup\Backups\DIFF\'
+ 
+DECLARE DatabaseCursor CURSOR FOR
+SELECT name
+FROM sys.databases
+WHERE database_id > 4 -- Ignora os bancos de sistema
+AND name NOT IN ('MANUAL','APIS_SAN_DR','ApisSAN');
+ 
+OPEN DatabaseCursor
+ 
+FETCH NEXT FROM DatabaseCursor INTO @DatabaseName
+ 
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    -- Concatena o nome do banco de dados com a data e hora do backup
+    DECLARE @BackupFileName NVARCHAR(260)
+    SET @BackupFileName = @BackupPath + @DatabaseName + '_DIFF_' + REPLACE(CONVERT(NVARCHAR(20), GETDATE(), 120), ':', '') + '.bak'
+ 
+    -- Faz o backup diferencial do banco de dados
+    BACKUP DATABASE @DatabaseName
+    TO DISK = @BackupFileName
+    WITH DIFFERENTIAL, COMPRESSION, STATS = 10; -- Adicione outras opções de backup aqui, se necessário
+ 
+    FETCH NEXT FROM DatabaseCursor INTO @DatabaseName
+END
+ 
+CLOSE DatabaseCursor
+DEALLOCATE DatabaseCursor
